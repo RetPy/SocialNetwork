@@ -10,15 +10,27 @@ class CommentSerializer(serializers.ModelSerializer):
 
 
 class LikeSerializer(serializers.ModelSerializer):
+    post = serializers.PrimaryKeyRelatedField(read_only=True)
+    user = serializers.PrimaryKeyRelatedField(read_only=True)
+
     class Meta:
         model = Like
         fields = '__all__'
 
+    def create(self, validated_data):
+        post = Post.objects.get(id=self.context['request'].parser_context['kwargs']['pk'])
+        like = Like(
+            user=self.context['request'].user,
+            post=post
+        )
+        like.save()
+        return like
+
 
 class PostSerializer(serializers.ModelSerializer):
+    user = serializers.PrimaryKeyRelatedField(read_only=True)
     comments = CommentSerializer(many=True, read_only=True)
-    post_liked = LikeSerializer(many=True, read_only=True)
-    # total_likes = serializers.SerializerMethodField()
+    total_likes = serializers.SerializerMethodField()
 
     class Meta:
         model = Post
@@ -29,14 +41,15 @@ class PostSerializer(serializers.ModelSerializer):
             'text',
             'created_at',
             'comments',
-            'post_liked',
-            # 'total_likes'
+            'total_likes',
         )
 
     def create(self, validated_data):
         post = Post(**validated_data)
         post.user = self.context['request'].user
+        post.save()
         return post
 
-    def get_total_likes(self):
-        return len(self.validated_data['post_liked'])
+    @staticmethod
+    def get_total_likes(obj):
+        return obj.post_liked.count()
