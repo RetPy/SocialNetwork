@@ -19,7 +19,5 @@ urlpatterns = [
     path('token/create/', cache_page(60*60*3)(TokenObtainPairView.as_view())),
     path('token/refresh/', TokenRefreshView.as_view()),
     path('token/verify/', TokenVerifyView.as_view()),
-
-    # path('test/', TestView.as_view())
 ]
 urlpatterns += router.urls
