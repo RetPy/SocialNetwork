@@ -4,9 +4,29 @@ from apps.posts.models import Post, Like, Comment
 
 
 class CommentSerializer(serializers.ModelSerializer):
+    post = serializers.PrimaryKeyRelatedField(read_only=True)
+    user = serializers.PrimaryKeyRelatedField(read_only=True)
+    parent = serializers.PrimaryKeyRelatedField(queryset=Comment.objects.all(), allow_null=True)
+
     class Meta:
         model = Comment
         fields = '__all__'
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        if self.context.get('request'):
+            self.fields['parent'].queryset = Comment.objects.filter(post=self.get_current_post())
+
+    def get_current_post(self):
+        return Post.objects.get(id=self.context['request'].parser_context['kwargs']['pk'])
+
+    def create(self, validated_data):
+        validated_data['user'] = self.context['request'].user
+        validated_data['post'] = self.get_current_post()
+        comment = Comment(**validated_data)
+        comment.save()
+        return comment
 
 
 class LikeSerializer(serializers.ModelSerializer):
